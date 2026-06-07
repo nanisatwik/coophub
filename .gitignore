@@ -1,0 +1,42 @@
+# --- Secrets: never commit these ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Node / Frontend ---
+node_modules/
+dist/
+build/
+.vite/
+
+# --- Terraform (Phase 3) ---
+# State files contain secrets and infra layout — keep them out of git.
+# Real teams store state in S3 + DynamoDB; we'll set that up in Phase 3.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# --- Kubernetes (Phase 4) ---
+kubeconfig
+*.kubeconfig
+
+# --- OS / Editor noise ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
