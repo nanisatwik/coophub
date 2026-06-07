@@ -25,3 +25,12 @@ Tells git what to *never* track: secrets (`.env`), generated files (`__pycache__
 
 ### Empty directories
 Git tracks *files*, not directories. Empty folders vanish on clone. Either commit a `.gitkeep` placeholder or just don't create the folder until it has real content. We chose the latter — service folders appear in Phase 1.
+
+### Local repo vs GitHub repo
+Two separate things. The `.git/` folder on your laptop = local history. GitHub = a hosted copy. `git push` syncs local → GitHub; `git pull` syncs the other way. They are only connected once you `git remote add origin <url>`. CI (Phase 2), ArgoCD (Phase 5), and PRs all require the GitHub copy.
+
+### `origin` and `-u`
+`origin` is the conventional name for the default remote (just a label, nothing magic). `git push -u origin main` pushes `main` *and* sets up tracking — after that, plain `git push` / `git pull` knows where to go.
+
+### First-push collision + `--force-with-lease`
+If you tick "Add a README" when creating a repo on github.com, the remote has a commit your local doesn't, and `git push` is rejected with "fetch first." Two ways out: `git pull --rebase` (replay your work on top, resolve conflicts) for the normal case, or `git push --force-with-lease` to overwrite remote — *only* safe when the remote has nothing worth keeping and you're the only contributor. `--force-with-lease` is `--force` with a seatbelt: it refuses the push if the remote moved since you last fetched, so you can't silently clobber a teammate. **Rule of thumb: never plain `--force` to a shared branch.**
