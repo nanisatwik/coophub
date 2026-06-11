@@ -34,3 +34,11 @@ Two separate things. The `.git/` folder on your laptop = local history. GitHub =
 
 ### First-push collision + `--force-with-lease`
 If you tick "Add a README" when creating a repo on github.com, the remote has a commit your local doesn't, and `git push` is rejected with "fetch first." Two ways out: `git pull --rebase` (replay your work on top, resolve conflicts) for the normal case, or `git push --force-with-lease` to overwrite remote — *only* safe when the remote has nothing worth keeping and you're the only contributor. `--force-with-lease` is `--force` with a seatbelt: it refuses the push if the remote moved since you last fetched, so you can't silently clobber a teammate. **Rule of thumb: never plain `--force` to a shared branch.**
+
+### Shells we'll live in: PowerShell, cmd, Bash
+Three different shells show up in this project, each speaks its own dialect.
+- **cmd.exe** (Windows Command Prompt, prompt `C:\...>`): 1987 design, text-only, tiny command set. Avoid — only used for old `.bat` scripts.
+- **PowerShell** (prompt `PS C:\...>`): modern Windows shell. Pipes **objects** (not text) between commands, full programming language, has Linux-style aliases (`ls`, `cd`, `cat`, `pwd`). This is where we work on the laptop.
+- **Bash/sh** (inside Docker containers and GitHub Actions): standard Linux shell. Different syntax — `ls -la`, `export VAR=x`, `if [ -f file ]; then ... fi`. We learn it as it comes up.
+
+The cmdlet `New-Item` is PowerShell-only and errors in cmd.exe — that's how we caught the wrong shell. Going forward: always launch PowerShell for CoopHub work.
