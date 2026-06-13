@@ -1,0 +1,54 @@
+# CoopHub local stack — Phase 1b
+#
+# Defines the two stateful services: Postgres (truth) and Redis (cache).
+# Run with:  docker compose up -d
+# Stop with: docker compose down
+# Wipe data: docker compose down -v   (the -v deletes the volume)
+#
+# Service names ('postgres', 'redis') become DNS names on the auto-created
+# compose network — the API service in Phase 1c will use these names to connect.
+
+services:
+  postgres:
+    image: postgres:16-alpine        # official Postgres 16 on tiny Alpine Linux (~80 MB)
+    container_name: coophub-postgres # fixed name so `docker logs coophub-postgres` always works
+    restart: unless-stopped          # auto-restart on crash, but stay down if we explicitly `docker compose down`
+    environment:
+      # These come from the .env file in the same directory (compose auto-loads it).
+      # NEVER hardcode credentials here — the .env is gitignored, this YAML is committed.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      # host:container — exposes container port 5432 on localhost:5432 so we can use
+      # a desktop tool (psql, DBeaver) without going through Docker. In prod we'd skip this.
+      - "5432:5432"
+    volumes:
+      # Named volume — persists Postgres data across `docker compose down`/`up` cycles.
+      # The volume itself is declared in the top-level `volumes:` block below.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready is Postgres's own "am I accepting connections?" probe.
+      # Compose marks the service `healthy` only after this exits 0.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s   # how often to probe
+      timeout: 5s    # max time per probe before failure
+      retries: 5     # consecutive failures before marking 'unhealthy'
+
+  redis:
+    image: redis:7-alpine            # official Redis 7 on Alpine (~30 MB)
+    container_name: coophub-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"                  # expose for local debugging via redis-cli on host
+    healthcheck:
+      # `redis-cli ping` returns PONG when the server is up.
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+# Named volumes survive `docker compose down`. They're stored under Docker's
+# internal data dir on your laptop. `docker volume ls` shows them.
+volumes:
+  postgres_data:
