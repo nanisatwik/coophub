@@ -42,3 +42,40 @@ Three different shells show up in this project, each speaks its own dialect.
 - **Bash/sh** (inside Docker containers and GitHub Actions): standard Linux shell. Different syntax — `ls -la`, `export VAR=x`, `if [ -f file ]; then ... fi`. We learn it as it comes up.
 
 The cmdlet `New-Item` is PowerShell-only and errors in cmd.exe — that's how we caught the wrong shell. Going forward: always launch PowerShell for CoopHub work.
+
+---
+
+## Phase 1b — Postgres + Redis in Docker Compose
+
+### Image vs Container vs Volume vs Network
+Four words to lock in.
+- **Image** = read-only recipe (e.g. `postgres:16-alpine`). Built in layers; layers cache.
+- **Container** = a running instance of an image. Throwaway by design.
+- **Volume** = persistent storage that outlives any single container. Your data lives here, not in the container.
+- **Network** = a private virtual LAN compose creates for the stack. Containers find each other by **service name** (`postgres`, `redis`) inside it. Outside it, those names mean nothing.
+
+### `docker compose up -d` — what actually happens
+1. Reads `docker-compose.yml`.
+2. Reads `.env` and substitutes `${VARIABLE}` placeholders.
+3. Pulls images from Docker Hub (first run only; cached after).
+4. Creates the compose network and any declared volumes.
+5. Starts each container, injecting env vars at runtime.
+6. Maps `host:container` ports so the laptop can reach the containers via `localhost`.
+7. With `-d` (detached), it returns the shell while containers keep running in the background.
+
+`docker compose down` stops and removes containers + network (volumes kept). `docker compose down -v` also wipes volumes — data gone.
+
+### Healthchecks
+A small probe Docker runs inside the container repeatedly to answer "are you actually ready?" not just "did the process start?" Postgres uses `pg_isready`; Redis uses `redis-cli ping`. Phase 1c's API will wait on these via `depends_on: condition: service_healthy` so it doesn't crash by trying to connect before the DB accepts queries.
+
+### `.env` vs `.env.example` vs `.gitignore`
+- `.env.example` — template with placeholder values. **Committed.**
+- `.env` — real values. **Gitignored, never committed.**
+- `.gitignore` — has `.env` in its list (set in Phase 0).
+Standard convention across modern projects. Stops credentials from leaking into git history (which is forever).
+
+### `$$` escaping in compose YAML
+A single `${VAR}` is substituted by compose before sending the YAML to Docker. A double `$${VAR}` escapes that substitution so the shell **inside the container** does it instead. Healthchecks run inside the container, so we use `$${POSTGRES_USER}` there.
+
+### Declarative infrastructure
+You describe **what you want** (a Postgres service, a Redis service, this network, this volume), the tool figures out **how**. Same idea powers Kubernetes manifests (Phase 4), Terraform (Phase 3), and ArgoCD (Phase 5). Imperative shell scripts ("install this, then start that") are the old way.
